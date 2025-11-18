@@ -1,11 +1,6 @@
-import Groq from "groq-sdk";
-
 import { conversationRepository } from "../repositories/conversation.repository";
 import instructions from "../prompts/chatbot.txt";
-
-const client = new Groq({
-  apiKey: process.env.LLM_API_KEY,
-});
+import { llmClient } from "../llm/client";
 
 type messageResponse = {
   id: string;
@@ -17,27 +12,19 @@ export const conversationService = {
     message: string,
     conversationId: string
   ): Promise<messageResponse> => {
-    const response = await client.chat.completions.create({
+    const response = await llmClient.generateText({
       model: process.env.LLM_MODEL as string,
-      messages: [
-        {
-          role: "system",
-          content: (instructions as unknown as string) || "",
-        },
-        {
-          role: "user",
-          content: message,
-        },
-      ],
+      instructions,
+      prompt: message,
       temperature: Number(process.env.LLM_TEMPERATURE),
-      max_tokens: Number(process.env.LLM_MAX_OUTPUT_TOKENS),
+      maxOutputTokens: Number(process.env.LLM_MAX_OUTPUT_TOKENS),
     });
 
     conversationRepository.setLastResponseId(conversationId, response.id);
 
     return {
       id: response.id,
-      message: response.choices?.[0]?.message?.content ?? "",
+      message: response.message,
     };
   },
 };
